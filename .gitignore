@@ -1,0 +1,32 @@
+# Environment files
+.env
+Backend/.env
+Frontend/.env
+
+# Node modules
+node_modules/
+Backend/node_modules/
+Frontend/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+
+# Misc
+*.log
