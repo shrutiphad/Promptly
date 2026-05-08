@@ -1,3 +1,6 @@
+import dns from "node:dns";
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
+dns.setDefaultResultOrder("ipv4first");
 import dotenv from "dotenv";
 dotenv.config({ debug: true });
 import express from "express";
