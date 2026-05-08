@@ -1,4 +1,7 @@
-.signup-container {
+@import "./Login.css";
+
+
+/* .signup-container {
   padding: 0px;
   width: 100%;
   display: flex;
@@ -27,7 +30,7 @@
 } */
 
 
-
+/* 
 .submit-btn {
   background-color: #238636;
   border: none;
@@ -60,4 +63,4 @@
 
 .line {
   margin:  50px 50px 50px 130px;
-}
+} */ 

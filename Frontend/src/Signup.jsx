@@ -2,115 +2,134 @@ import React, { useState } from "react";
 import { ToastContainer } from "react-toastify";
 import { Link, useNavigate } from "react-router-dom";
 import { handleError, handleSuccess } from "./utils.js";
-import './Signup.css';
+import "./Signup.css";
+import axios from "axios";
+
+const VITE_API_URL = import.meta.env.VITE_API_URL;
 
 function Signup() {
-
   const [signupInfo, setSignupInfo] = useState({
     username: "",
     email: "",
-    password:"",
-  })
+    password: "",
+  });
 
+ 
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // const copySignupInfo = { ...signupInfo };
-    // copySignupInfo[name] = value;
-    // setSignupInfo(copySignupInfo);
-    setSignupInfo({ ...signupInfo, [name]: value });
-  }
+    setSignupInfo((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
 
     const { username, email, password } = signupInfo;
-
     if (!username || !email || !password) {
-      return handleError('username, email and password are required')
+      return handleError("Username, email and password are required");
     }
-    
+
     try {
-      const url = "http://localhost:8080/api/signup";
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(signupInfo)
-      });
-    
-    
-      const result = await response.json();
+      const response = await axios.post(
+        `${VITE_API_URL}/api/signup`,
+        signupInfo,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.data;
       const { success, message, error } = result;
+
       if (success) {
         handleSuccess(message);
         setTimeout(() => {
-          navigate('/login')
-        }, 1000)
+          navigate("/login");
+        }, 1000);
       } else if (error) {
-        const details = error?.details[0].message;
+        const details = error?.details?.[0]?.message || message;
         handleError(details);
-      } else if (!success) {
+      } else {
         handleError(message);
       }
-      console.log(result);
     } catch (err) {
-      handleError(err);
+      handleError(err.message || "Signup failed");
     }
   };
 
   return (
-    <>
-      <div className="signup-container">
-      <h1 style={{fontStyle: "italic" }}>Welcome to PROMPTLY  <i className="fa-solid fa-robot"> </i>  </h1>
-        <h1>Signup</h1>
-        <form onSubmit={handleSignup}>
-          <div>
-            <label htmlFor="name">Userame</label>
-            <p></p>
-            <input
-              onChange={handleChange}
-              type='text'
-              name="username"
-              autoFocus
-              placeholder="Enter your username"
-              value={signupInfo.username}
-            />
+    <div className="signup-container">
+      <div className="auth-shell">
+        <div className="auth-header">
+          <div className="auth-brand">
+            <div className="auth-logo">P</div>
+            <span className="auth-name">Promptly</span>
           </div>
-          <p></p>
-          <div>
-            <label htmlFor="email">Email</label>
-            <p></p>
-            <input
-              onChange={handleChange}
-              type='email'
-              name="email"
-              placeholder="Add your email"
-              value={signupInfo.email}
-            />
+          <p className="auth-subheading">Create your account</p>
+        </div>
+
+        <div className="auth-card">
+          <div className="auth-tabs">
+            <Link to="/login" className="auth-tab">Login</Link>
+            <button type="button" className="auth-tab active">Sign Up</button>
           </div>
-          <p></p>
-          <div>
-            <label htmlFor="password">Password</label>
-            <p></p>
-            <input
-              onChange={handleChange}
-              type='password'
-              name="password"
-              placeholder="Set your password"
-              value={signupInfo.password}
-            />
-          </div>
-          <button type="submit" className="submit-btn">Signup</button>
-          <span className='line'>Already have an account ?
-            <Link to="/login" className='passkey-login'> Login Now</Link>
-          </span>
-        </form>
-        <ToastContainer />
+
+          <form className="auth-form" onSubmit={handleSignup}>
+            <div className="auth-field">
+              <label htmlFor="username">Full name</label>
+              <input
+                id="username"
+                className="input auth-input"
+                onChange={handleChange}
+                type="text"
+                name="username"
+                autoFocus
+                placeholder="Shruti Phad"
+                value={signupInfo.username}
+              />
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                className="input auth-input"
+                onChange={handleChange}
+                type="email"
+                name="email"
+                placeholder="you@example.com"
+                value={signupInfo.email}
+              />
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                className="input auth-input"
+                onChange={handleChange}
+                type="password"
+                name="password"
+                placeholder="Create a strong password"
+                value={signupInfo.password}
+              />
+            </div>
+
+            <button type="submit" className="submit-btn auth-submit-btn">Create account →</button>
+          </form>
+        </div>
+
+        <span className="auth-switch line">
+          Already have one?
+          <Link to="/login" className="passkey-login">Login</Link>
+        </span>
       </div>
-    </>
+      <ToastContainer />
+    </div>
   );
 }
+
 export default Signup;

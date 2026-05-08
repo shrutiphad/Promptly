@@ -1,161 +1,249 @@
 import "./ChatWindow.css";
 import Chat from "./Chat.jsx";
 import { MyContext } from "./MyContext.jsx";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { ScaleLoader } from "react-spinners";
-import { useNavigate } from 'react-router-dom';
-import { handleError, handleSuccess } from './utils.js';
-import { ToastContainer } from 'react-toastify';
-import "./Login.css"
+import { useNavigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import { handleError, handleSuccess } from "./utils.js";
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://promptly-ezg2.onrender.com";
+
+
 function ChatWindow() {
-    const { prompt, setPrompt, reply, setReply, currThreadId, setPrevChats, setNewChat } = useContext(MyContext);
-    const [loading, setLoading] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
-    const [loggedInUser, setLoggedInUser] = useState('');
-    const navigate = useNavigate();
+  const { prompt, setPrompt, reply, setReply, currThreadId, setPrevChats, setNewChat } = useContext(MyContext);
+  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loggedInUser, setLoggedInUser] = useState("");
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        setLoggedInUser(localStorage.getItem('loggedInUser'))
-    }, [])
 
-    const handleLogout = (e) => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('loggedInUser');
-        handleSuccess('User Loggedout');
-        setTimeout(() => {
-            navigate('/login');
-        }, 1000)
+  useEffect(() => {
+    setLoggedInUser(localStorage.getItem("loggedInUser") || "Shruti");
+  }, []);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("loggedInUser");
+
+    handleSuccess("User logged out");
+
+    setTimeout(() => {
+      navigate("/login");
+    }, 1000);
+  };
+
+  const getReply = async () => {
+    const cleanPrompt = prompt.trim();
+
+    if (!cleanPrompt || loading) return;
+
+    // setLoading(true);
+    // setNewChat(false);
+
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      handleError("Please login again");
+       navigate("/login");
+       return;
     }
+    
+    setLoading(true);
+    setNewChat(false);
+    setReply(null);
+    
+    // try {
+    //   const response = await fetch("https://promptly-ezg2.onrender.com", {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //       Authorization: `Bearer ${localStorage.getItem("token")}`,
+    //     },
+    //     body: JSON.stringify({
+    //       message: cleanPrompt,
+    //       threadId: currThreadId,
+    //     }),
+    //   });
 
-    // const getReply = async () => {
-    //     if (!prompt.trim()) return;
-    //     setLoading(true);
-    //     setNewChat(false);
 
-    //     console.log("message ", prompt, " threadId ", currThreadId);
-    //     const options = {
-    //         method: "POST",
-    //         headers: {
-    //             "Content-Type": "application/json"
-    //         },
-    //         body: JSON.stringify({
-    //             message: prompt,
-    //             threadId: currThreadId
-    //         })
-    //     };
+  //   try {
+  //         const response = await axios.post(
+  //           `${API_URL}/api/chat`,
+  //           {
+  //             message: cleanPrompt,
+  //             threadId: currThreadId,
+  //           },
+  //           {
+  //             headers: getAuthHeaders(),
+  //           }
+  //         );
+    
 
-    //     try {
-    //         const response = await fetch("http://localhost:8080/api/chat", options);
-    //         const headers = {
-    //             method: "GET",
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //                 Authorization: `Bearer ${localStorage.getItem("token")}`,
-    //             }
-    //         };
-    //         const res = await response.json();
-    //         console.log(res);
-    //         setReply(res.reply);
-    //     } catch (err) {
-    //         console.log(err);
-    //     }
-    //     setLoading(false);
-    // }
+  //     const res = await response.data;
+  //     if (!res.ok) throw new Error(res.message || "Unable to get reply");
 
-    const getReply = async () => {
-        if (!prompt.trim()) return;
-      
-        setLoading(true);
-        setNewChat(false);
-      
-        try {
-          const response = await fetch("http://localhost:8080/api/chat", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({
-              message: prompt,
-              threadId: currThreadId,
-            }),
-          });
-      
-          const res = await response.json();
-          console.log(res);
-      
-          if (!response.ok) throw new Error(res.message);
-      
-          setReply(res.reply);
-        } catch (err) {
-          console.log(err);
+  //     setReply(res.reply);
+  //   } catch (err) {
+  //     console.log(err);
+  //     handleError(err.message || "Server error. Please try again.");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   if (prompt && reply) {
+  //     setPrevChats((prevChats) => [
+  //       ...prevChats,
+  //       { role: "user", content: prompt },
+  //       { role: "assistant", content: reply },
+  //     ]);
+  //   }
+  //   setPrompt("");
+  // }, [reply]);
+
+  
+      setPrevChats((prevChats) => [
+        ...prevChats,
+        {
+          role: "user",
+          content: cleanPrompt,
+        },
+      ]);
+  
+      setPrompt("");
+  
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/chat`,
+        {
+          message: cleanPrompt,
+          threadId: currThreadId,
+        },
+        {
+          headers: getAuthHeaders(),
         }
-      
-        setLoading(false);
-      };
-      
-    useEffect(() => {
-        if (prompt && reply) {
-            setPrevChats(prevChats => (
-                [...prevChats, {
-                    role: "user",
-                    content: prompt
-                }, {
-                    role: "assistant",
-                    content: reply
-                }]
-            ));
-        }
-        setPrompt("");
-    }, [reply]);
+      );
+  
+      const aiReply = response.data?.reply;
+  
+      if (!aiReply) {
+        throw new Error("Server did not return a reply");
+      }
+  
+      setPrevChats((prevChats) => [
+        ...prevChats,
+        {
+          role: "assistant",
+          content: aiReply,
+        },
+      ]);
+  
+      setReply(aiReply);
+    } catch (err) {
+      const backendMessage =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Server error. Please try again.";
+  
+      handleError(backendMessage);
+      console.error("Chat error:", err);
+    
 
-    const handleProfileClick = () => {
-        setIsOpen(!isOpen);
+    setPrevChats((prevChats) => [
+      ...prevChats,
+      {
+        role: "assistant",
+        content: "Sorry, I could not reach the server. Please try again.",
+      },
+    ]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      getReply();
     }
+  };
 
-    return (
-        <>
-            <div className="chatWindow">
-                <div className="navbar">
-                    <span><h2>Promptly</h2></span>
-                    <div className="userIconDiv" onClick={handleProfileClick}>
-                        <span className="userIcon"><i className="fa-solid fa-user"></i></span>
-                    </div>
-                </div>
+  return (
+    <div className="chatWindow">
+      <div className="navbar">
+        <div className="navbar-left">
+          <span className="chat-status-dot"></span>
+          <div>
+            <h2 className="navbar-title">Promptly</h2>
+            <span className="navbar-subtitle">Ask, debug, write, solve</span>
+          </div>
+        </div>
 
-                {isOpen && (
-                    <div className="dropDown">
-                        <div className="dropDownItem"><i className="fa-solid fa-gear"></i> Settings</div>
-                        <div className="dropDownItem"><i className="fa-solid fa-cloud-arrow-up"></i> Upgrade plan</div>
-                        <div className="dropDownItem-logout"> <i className="fa-solid fa-arrow-right-from-bracket"></i>
-                            <button className='logout' onClick={handleLogout}>Logout</button>
-                        </div>
-                    </div>
-                )}
+        <div className="userIconDiv">
+          <span className="userIcon" onClick={() => setIsOpen((prev) => !prev)}>
+            {(loggedInUser || "P").charAt(15).toUpperCase()} P
+          </span>
 
-                <Chat />
-                <ScaleLoader color="#fff" loading={loading} />
-
-                <div className="chatInput">
-                    <div className="inputBox">
-                        <input
-                            placeholder="Ask anything"
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' ? getReply() : ''}
-                        />
-                        <div id="submit" onClick={getReply}>
-                            <i className="fa-solid fa-paper-plane"></i>
-                        </div>
-                    </div>
-
-                    <p className="info">
-                        Promptly can make mistakes. Check important info. See Cookie Preferences.
-                    </p>
-                </div>
+          {isOpen && (
+            <div className="dropDown">
+              <div className="dropDownItem">⚙ Settings</div>
+              <div className="dropDownItem">✦ Upgrade plan</div>
+              <div className="dropDownItem-logout">
+                ↳
+                <button type="button" className="logout" onClick={handleLogout}>Logout</button>
+              </div>
             </div>
-        </>
-    )
-}
+          )}
+        </div>
+      </div>
 
-export default ChatWindow;
+      <main className="chat-main-area">
+        <Chat />
+      </main>
+
+      <div className="loaderRow">
+        <ScaleLoader color="#7c6ef1" height={14} width={3} radius={3} loading={loading} />
+      </div>
+
+      <div className="chatInput">
+        <div className="inputBox">
+          <input
+            className="prompt-input"
+            placeholder="Ask anything…"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <button
+            type="button"
+            id="submit"
+            className={!prompt.trim() || loading ? "is-disabled" : ""}
+            onClick={getReply}
+            disabled={!prompt.trim() || loading}
+          >
+            <span className="send-arrow">→</span>
+          </button>
+        </div>
+
+        <p className="info">Promptly may produce errors. Verify important information before using it.</p>
+      </div>
+      <ToastContainer />
+    </div>
+  );
+    }
+
+    export default ChatWindow;

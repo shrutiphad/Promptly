@@ -1,75 +1,145 @@
+
+
 import "./Chat.css";
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { MyContext } from "./MyContext";
 import ReactMarkdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
+import { handleError, handleSuccess } from "./utils.js";
 
 function Chat() {
-    const {newChat, prevChats, reply} = useContext(MyContext);
-    const [latestReply, setLatestReply] = useState(null);
+  const { newChat, prevChats, reply, setPrompt } = useContext(MyContext);
+  const [latestReply, setLatestReply] = useState(null);
+  const bottomRef = useRef(null);
 
-    useEffect(() => {
-        if(reply === null) {
-            setLatestReply(null); //prevchat load
-            return;
-        }
+  const [copiedIndex, setCopiedIndex] = useState(null);
 
-        if(!prevChats?.length) return;
+  const handleCopy = async (text,index) => {
+    try {
+      await navigator.clipboard.writeText(text);
 
-        const content = reply.split(" "); //individual words
+      setCopiedIndex(index);
+      handleSuccess("Copied to clipboard!");
 
-        let idx = 0;
-        const interval = setInterval(() => {
-            setLatestReply(content.slice(0, idx+1).join(" "));
+      setTimeout(() => {
+        setCopiedIndex(null);
+      }, 1500);
+    } catch (err) {
+      console.error("Copy failed:", err);
+      handleError("Failed to copy message");
+    }
+  };
 
-            idx++;
-            if(idx >= content.length) clearInterval(interval);
-        }, 40);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [prevChats, latestReply]);
 
-        return () => clearInterval(interval);
+  useEffect(() => {
+    if (reply === null) {
+      setLatestReply(null);
+      return;
+    }
 
-    }, [prevChats, reply])
+    if (!prevChats?.length) return;
 
+    const content = reply.split(" ");
+    let idx = 0;
+
+    const interval = setInterval(() => {
+      setLatestReply(content.slice(0, idx + 1).join(" "));
+      idx++;
+      if (idx >= content.length) clearInterval(interval);
+    }, 35);
+
+    return () => clearInterval(interval);
+  }, [prevChats, reply]);
+
+  const starterPrompts = [
+    "Explain this code simply",
+    "Debug my React error",
+    "Write a clean resume bullet",
+    "Summarize this topic fast",
+  ];
+
+  const renderAssistantMessage = (content,index, showActions = true) => (
+    <div className="message-bubble aiMessage">
+      <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+        {content}
+      </ReactMarkdown>
+
+      {showActions && (
+        <div className="message-actions">
+           <button
+            type="button"
+            className="message-action-btn"
+            onClick={() => handleCopy(content, index)}
+          >
+            {copiedIndex === index ? "Copied" : "Copy"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  if (newChat && !prevChats?.length) {
     return (
-        <>
-            {newChat && <h1>You are just one PROMPT away!</h1>}
-            <div className="chats">
-                <span className="scroll"></span>
-                {
-                    prevChats?.slice(0, -1).map((chat, idx) => 
-                        <div className={chat.role === "user"? "userDiv" : "gptDiv"} key={idx}>
-                            {
-                                chat.role === "user"? 
-                                <p className="userMessage">{chat.content}</p> : 
-                                <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{chat.content}</ReactMarkdown>
-                            }
-                        </div>
-                    )
-                }
+      <div className="chats chats--empty">
+        <div className="chat-empty-state">
+          <div className="empty-mark">✦</div>
+          <h1>You are just one PROMPT away!</h1>
+          <p>Start a focused conversation, ask for code help, debug errors, or turn rough ideas into polished work.</p>
+          <div className="prompt-grid">
+            {starterPrompts.map((prompt) => (
+              <button
+                type="button"
+                className="prompt-chip"
+                key={prompt}
+                onClick={() => setPrompt(prompt)}
+              >
+                {prompt} →
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-                {    //this is to print the latest reply 
-                    prevChats.length > 0  && (
-                        <>
-                            {
-                                latestReply === null ? (
-                                    <div className="gptDiv" key={"non-typing"} >
-                                    <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{prevChats[prevChats.length-1].content}</ReactMarkdown>
-                                </div>
-                                ) : (
-                                    <div className="gptDiv" key={"typing"} >
-                                     <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{latestReply}</ReactMarkdown>
-                                </div>
-                                )
+  const olderChats = prevChats?.slice(0, -1) || [];
+  const lastChat = prevChats?.length ? prevChats[prevChats.length - 1] : null;
 
-                            }
-                        </>
-                    )
-                }
+  return (
+    <div className="chats">
+      {olderChats.map((chat, idx) => (
+        <div className={`chat-row ${chat.role === "user" ? "userDiv" : "gptDiv"}`} key={idx}>
+          <div className="chat-avatar">{chat.role === "user" ? "S" : "P"}</div>
+          {chat.role === "user" ? (
+            <p className="message-bubble userMessage">{chat.content}</p>
+          ) : (
+            renderAssistantMessage(chat.content)
+          )}
+        </div>
+      ))}
 
-            </div>
-        </>
-    )
+      {lastChat && (
+        <div className={`chat-row ${lastChat.role === "user" ? "userDiv" : "gptDiv"}`}>
+          <div className="chat-avatar">{lastChat.role === "user" ? "S" : "P"}</div>
+          {lastChat.role === "user" ? (
+            <p className="message-bubble userMessage">{lastChat.content}</p>
+          ) : latestReply === null ? (
+          //   renderAssistantMessage(lastChat.content)
+          // ) : (
+              //   renderAssistantMessage(latestReply, false)
+              renderAssistantMessage(lastChat.content, prevChats.length - 1)
+            ) : (
+              renderAssistantMessage(latestReply, prevChats.length - 1, false)
+          )}
+        </div>
+      )}
+      <div ref={bottomRef} />
+    </div>
+  );
 }
 
 export default Chat;
